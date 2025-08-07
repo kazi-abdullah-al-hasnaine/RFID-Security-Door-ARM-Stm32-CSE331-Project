@@ -1,0 +1,21 @@
+| **Component**            | **Pin on Module** | **Connects To STM32 Pin** | **Notes**                                     |
+| ------------------------ | ----------------- | ------------------------- | --------------------------------------------- |
+| **Servo Motor**          | Signal            | `PA3`                     | Must be a PWM pin (used with `Servo.h`)       |
+|                          | VCC               | External 5V               | Use external supply, not STM32 3.3V           |
+|                          | GND               | Common GND with STM32     | Must be shared with STM32                     |
+| **OLED (SSD1306)**       | SDA               | `PB6`                     | I2C data (I2C1 SDA)                           |
+|                          | SCL               | `PB5`                     | I2C clock (I2C1 SCL)                          |
+|                          | VCC               | 3.3V                      | Or 5V if your OLED supports it                |
+|                          | GND               | GND                       | Shared GND                                    |
+| **RC522 RFID**           | SDA (SS)          | `PA4`                     | SPI1 NSS (chip select)                        |
+|                          | SCK               | `PA5`                     | SPI1 SCK                                      |
+|                          | MOSI              | `PA7`                     | SPI1 MOSI                                     |
+|                          | MISO              | `PA6`                     | SPI1 MISO                                     |
+|                          | RST               | `PB0`                     | Any free GPIO (you chose PB0)                 |
+|                          | VCC               | 3.3V                      | **Do NOT connect to 5V!**                     |
+|                          | GND               | GND                       | Shared GND                                    |
+| **Ultrasonic (HC-SR04)** | TRIG              | `PA2`                     | Trigger signal output                         |
+|                          | ECHO              | `PA1`                     | Echo input — use voltage divider if 5V sensor |
+|                          | VCC               | 5V                        | Can be powered from external 5V               |
+|                          | GND               | GND                       | Shared GND                                    |
+| **Onboard LED**          | —                 | `PC13`                    | Active LOW LED (optional)                     |
