@@ -1,0 +1,137 @@
+#include <SPI.h>
+#include <MFRC522.h>
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+#include <Servo.h>
+
+// OLED Config
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
+#define OLED_RESET    -1
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+
+// RFID Config
+#define RST_PIN     PB0    // RC522 RST
+#define SS_PIN      PA4    // RC522 NSS
+MFRC522 mfrc522(SS_PIN, RST_PIN);
+
+// Ultrasonic Pins
+#define TRIG_PIN    PA2
+#define ECHO_PIN    PA1
+
+// Servo
+Servo myservo;
+
+// Card UIDs
+byte cardA[4] = {0x06, 0xCC, 0x87, 0x97};
+byte cardB[4] = {0x03, 0x96, 0x41, 0xC5};
+
+void setup() {
+  // Init RFID
+  SPI.begin();
+  mfrc522.PCD_Init();
+
+  // Init OLED
+  Wire.begin();
+  display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(WHITE);
+
+  // Init Servo
+  myservo.attach(PA3);
+  myservo.write(0);
+
+  // Init Ultrasonic
+  pinMode(TRIG_PIN, OUTPUT);
+  pinMode(ECHO_PIN, INPUT);
+
+  // Boot message
+  display.setCursor(0, 0);
+  display.println("System Booting...");
+  display.display();
+  delay(1000);
+  display.clearDisplay();
+}
+
+void loop() {
+  float distance = getDistance();
+
+  if (distance > 5.0) {
+    display.clearDisplay();
+    display.setCursor(0, 0);
+    display.println("Developed by");
+    display.println("Soikot, Sunny");
+display.println("Pial & Showkot");
+    display.display();
+    delay(500); // Avoid flickering
+    return;
+  }
+
+  display.clearDisplay();
+  display.setCursor(0, 0);
+  display.println("Welcome,");
+  display.println("Please swipe your card!");
+  display.display();
+
+  if (!mfrc522.PICC_IsNewCardPresent() || !mfrc522.PICC_ReadCardSerial()) {
+    delay(200);
+    return;
+  }
+
+  bool isCardA = compareUID(mfrc522.uid.uidByte, cardA);
+  bool isCardB = compareUID(mfrc522.uid.uidByte, cardB);
+
+  display.clearDisplay();
+  display.setCursor(0, 0);
+
+  if (isCardA) {
+    display.println("Welcome Soikot");
+    display.display();
+    openGate();
+  }
+  else if (isCardB) {
+    display.println("Welcome Sunny");
+    display.display();
+    openGate();
+  }
+  else {
+    display.println("Unauthorized User");
+    display.display();
+    delay(3000);
+    display.clearDisplay();
+    display.display();
+  }
+
+  mfrc522.PICC_HaltA();
+  mfrc522.PCD_StopCrypto1();
+}
+
+bool compareUID(byte *uid, byte *validUID) {
+  for (int i = 0; i < 4; i++) {
+    if (uid[i] != validUID[i]) return false;
+  }
+  return true;
+}
+
+void openGate() {
+  myservo.write(90);
+  delay(2000);
+  myservo.write(0);
+  delay(500);
+  display.clearDisplay();
+  display.display();
+}
+
+float getDistance() {
+  digitalWrite(TRIG_PIN, LOW);
+  delayMicroseconds(2);
+  digitalWrite(TRIG_PIN, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(TRIG_PIN, LOW);
+
+  long duration = pulseIn(ECHO_PIN, HIGH, 30000); // 30 ms timeout
+  if (duration == 0) return 999; // Timeout or out of range
+  return duration * 0.0343 / 2.0; // in cm
+}
