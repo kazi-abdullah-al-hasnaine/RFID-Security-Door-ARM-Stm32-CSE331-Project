@@ -1,0 +1,98 @@
+#include <SPI.h>
+#include <MFRC522.h>
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+#include <Servo.h>
+
+#define RST_PIN     PB0    // RC522 RST
+#define SS_PIN      PA4    // RC522 NSS (SDA)
+
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
+#define OLED_RESET    -1
+
+Servo myservo;
+
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+MFRC522 mfrc522(SS_PIN, RST_PIN);
+
+byte cardA[4] = {0x06, 0xCC, 0x87, 0x97};
+byte cardB[4] = {0x03, 0x96, 0x41, 0xC5};
+
+void setup() {
+  SPI.begin();
+  mfrc522.PCD_Init();
+  delay(50);
+
+  Wire.begin();
+  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
+    while (1);
+  }
+
+  myservo.attach(PA3);
+  myservo.write(0);
+
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(WHITE);
+  display.setCursor(0, 0);
+  display.println("RFID + OLED Ready");
+  display.display();
+  delay(1000);
+}
+
+void loop() {
+  display.clearDisplay();
+  display.setCursor(0, 0);
+  display.println("Waiting...");
+  display.display();
+
+  if (!mfrc522.PICC_IsNewCardPresent() || !mfrc522.PICC_ReadCardSerial()) {
+    delay(200);
+    return;
+  }
+
+  bool isCardA = compareUID(mfrc522.uid.uidByte, cardA);
+  bool isCardB = compareUID(mfrc522.uid.uidByte, cardB);
+
+  display.clearDisplay();
+  display.setCursor(0, 0);
+
+  if (isCardA) {
+    display.println("Card A matched");
+    display.display();
+    openGate();
+  }
+  else if (isCardB) {
+    display.println("Card B matched");
+    display.display();
+    openGate();
+  }
+  else {
+    display.println("Invalid card");
+    display.display();
+    delay(3500);        // same wait as servo open + delay + clear display
+    display.clearDisplay();
+    display.display();
+  }
+
+  mfrc522.PICC_HaltA();
+  mfrc522.PCD_StopCrypto1();
+}
+
+bool compareUID(byte *uid, byte *validUID) {
+  for (int i = 0; i < 4; i++) {
+    if (uid[i] != validUID[i]) return false;
+  }
+  return true;
+}
+
+void openGate() {
+  myservo.write(90);    // open servo
+  delay(2000);          // wait 2 seconds
+  myservo.write(0);     // close servo
+  delay(500);           // small delay before clearing display
+  display.clearDisplay();
+  display.display();
+}
